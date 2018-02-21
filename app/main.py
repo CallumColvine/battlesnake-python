@@ -1,6 +1,9 @@
-import bottle
-import os
 import random
+import os
+
+import bottle
+
+from board import get_board
 
 
 @bottle.route('/static/<path:path>')
@@ -23,22 +26,39 @@ def start():
     # TODO: Do things with data
 
     return {
-        'color': '#00FF00',
+        'color': '#1A0F05',
         'taunt': '{} ({}x{})'.format(game_id, board_width, board_height),
         'head_url': head_url,
         'name': 'battlesnake-python'
     }
 
 
+# First pass testing our data model
+def get_move(board):
+    food = board.food[0]
+    snake = board.agent_snake
+
+    # naive algorithm that runs into itself
+    x = snake.head.x - food.point.x
+    y = snake.head.y - food.point.y
+    if x != 0:
+        if x < 0:
+            return 'right'
+        return 'left'
+    else:
+        if y < 0:
+            return 'down'
+        return 'up'
+
+
+
 @bottle.post('/move')
 def move():
     data = bottle.request.json
 
-    # TODO: Do things with data
-    directions = ['up', 'down', 'left', 'right']
-
+    board = get_board(data)
     return {
-        'move': random.choice(directions),
+        'move': get_move(board),
         'taunt': 'battlesnake-python!'
     }
 
