@@ -1,9 +1,12 @@
-import random
 import os
+
+from pathfinding.core.grid import Grid
+from pathfinding.finder.a_star import AStarFinder
 
 import bottle
 
-from board import get_board
+from board import get_board, Point
+
 
 
 @bottle.route('/static/<path:path>')
@@ -33,14 +36,9 @@ def start():
     }
 
 
-# First pass testing our data model
-def get_move(board):
-    food = board.food[0]
-    snake = board.agent_snake
-
-    # naive algorithm that runs into itself
-    x = snake.head.x - food.point.x
-    y = snake.head.y - food.point.y
+def map_move(snake, point):
+    x = snake.head.x - point.x
+    y = snake.head.y - point.y
     if x != 0:
         if x < 0:
             return 'right'
@@ -50,6 +48,19 @@ def get_move(board):
             return 'down'
         return 'up'
 
+
+def get_move(board):
+    grid = Grid(matrix=board)
+
+    snake = board.agent_snake
+    food = board.food[0]
+
+    start_pt = grid.node(snake.head.x, snake.head.y)
+    end_pt = grid.node(food.point.x, food.point.y)
+
+    finder = AStarFinder()
+    path, _ = finder.find_path(start_pt, end_pt, grid)
+    return map_move(snake, Point(*path[1]))
 
 
 @bottle.post('/move')

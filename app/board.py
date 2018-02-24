@@ -25,14 +25,14 @@ class Snake(object):
         return self.body[1:]
 
 
-class Board(object):
+class Board(list):
     def __init__(self, agent_id, width, height, snakes, food):
         self.agent_id = agent_id
         self.width = width
         self.height = height
         self.snakes = snakes
         self.food = food
-        self._grid = [[None for _ in range(width)] for _ in range(height)]
+        self._grid = [[None for _ in range(height)] for _ in range(width)]
 
         self._populate_grid()
 
@@ -45,12 +45,16 @@ class Board(object):
     def _populate_grid(self):
         for snake in self.snakes:
             for point in snake.body:
-                self._grid[point.x][point.y] = snake
-        for f in self.food:
-            self._grid[f.point.x][f.point.y] = f
+                self._grid[point.y][point.x] = snake
+        # TK: disabled for now while experimenting with pathfinding library
+        #for f in self.food:
+        #    self._grid[f.point.x][f.point.y] = f
 
     def __getitem__(self, arg):
         return self._grid[arg]
+
+    def __len__(self):
+        return len(self._grid)
 
 
 def _parse_food(data):
