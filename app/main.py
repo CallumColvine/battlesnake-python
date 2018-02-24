@@ -49,18 +49,33 @@ def map_move(snake, point):
         return 'up'
 
 
-def get_move(board):
+def find_path(board, start, end):
     grid = Grid(matrix=board)
-
-    snake = board.agent_snake
-    food = board.food[0]
-
-    start_pt = grid.node(snake.head.x, snake.head.y)
-    end_pt = grid.node(food.point.x, food.point.y)
+    start_pt = grid.node(start.x, start.y)
+    end_pt = grid.node(end.x, end.y)
 
     finder = AStarFinder()
     path, _ = finder.find_path(start_pt, end_pt, grid)
-    return map_move(snake, Point(*path[1]))
+    return path
+
+
+def get_move(board):
+    snake = board.agent_snake
+    food = board.food[0]
+
+    # find path with exits in consideration
+    path_init  = find_path(board, snake.head, food)
+
+    path_return  = find_path(board, food, snake.tip)
+    intersects = set(path_init).intersection(set(path_return))
+    if intersects:
+        if food in intersects:
+            intersects.remove(food)
+        for x, y in intersects:
+            board[y][x] = snake
+
+    path_final = find_path(board, snake.head, food)
+    return map_move(snake, Point(*path_final[1]))
 
 
 @bottle.post('/move')

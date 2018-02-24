@@ -4,9 +4,8 @@ from collections import namedtuple
 Point = namedtuple('Point', ['x', 'y'])
 
 
-class Food(object):
-    def __init__(self, point):
-        self.point = point
+class Food(Point):
+    pass
 
 
 class Snake(object):
@@ -19,6 +18,10 @@ class Snake(object):
     @property
     def head(self):
         return self.body[0]
+
+    @property
+    def tip(self):
+        return self.body[-1]
 
     @property
     def tail(self):
@@ -38,17 +41,17 @@ class Board(list):
 
     @property
     def agent_snake(self):
-        for snake in self.snakes:
+        for snake in self.snakes.itervalues():
             if snake.id == self.agent_id:
                 return snake
 
     def _populate_grid(self):
-        for snake in self.snakes:
-            for point in snake.body:
+        for snake in self.snakes.itervalues():
+            for point in snake.body[:-1]:  # Excluding tip of snake since we can navigate it next round
                 self._grid[point.y][point.x] = snake
         # TK: disabled for now while experimenting with pathfinding library
-        #for f in self.food:
-        #    self._grid[f.point.x][f.point.y] = f
+        #for point in self.food:
+        #    self._grid[point.x][point.y] = point
 
     def __getitem__(self, arg):
         return self._grid[arg]
@@ -58,14 +61,14 @@ class Board(list):
 
 
 def _parse_food(data):
-    return [Food(Point(point['x'], point['y'])) for point in data['food']['data']]
+    return [Food(point['x'], point['y']) for point in data['food']['data']]
 
 
 def _parse_snakes(data):
-    snakes = []
+    snakes = {}
     for snake in data['snakes']['data']:
         body = [Point(point['x'], point['y']) for point in snake['body']['data']]
-        snakes.append(Snake(body, snake['length'], snake['health'], snake['id']))
+        snakes[snake['id']] = Snake(body, snake['length'], snake['health'], snake['id'])
 
     return snakes
 
