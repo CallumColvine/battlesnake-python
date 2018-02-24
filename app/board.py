@@ -45,19 +45,32 @@ class Board(list):
             if snake.id == self.agent_id:
                 return snake
 
+    def prune_agent_tail(self, num_points):
+        snake = self.snakes[self.agent_id]
+        for tip in snake.tail[-num_points:]:
+            self._grid[tip.y][tip.x] = None
+        return snake.body[-num_points]
+
     def _populate_grid(self):
         for snake in self.snakes.itervalues():
-            for point in snake.body[:-1]:  # Excluding tip of snake since we can navigate it next round
+            # Excluding tip of snake since we can tail-chase
+            for point in snake.body[:-1]:
                 self._grid[point.y][point.x] = snake
+
         # TK: disabled for now while experimenting with pathfinding library
         #for point in self.food:
         #    self._grid[point.x][point.y] = point
 
     def __getitem__(self, arg):
+        if isinstance(arg, Point):
+            return self._grid[arg.y][arg.x]
         return self._grid[arg]
 
     def __len__(self):
         return len(self._grid)
+
+    def __str__(self):
+        return '\n'.join([str(row) for row in self._grid])
 
 
 def _parse_food(data):
