@@ -65,8 +65,15 @@ def map_move(snake, point):
         return 'up'
 
 
-def find_path(board, start, end):
-    grid = Grid(matrix=board)
+# trim_tip necessary due to data anomaly we're getting from the server
+# unable to fully remove because many nodes are in same position, can collide if too close (hence > 1 condition)
+def find_path(board, start, end, trim_tip=False):
+    if trim_tip and board.pt_distance(start, end) > 1:
+        board_c = deepcopy(board)
+        board_c[end.y][end.x] = None
+        grid = Grid(matrix=board_c)
+    else:
+        grid = Grid(matrix=board)
     start_pt = grid.node(start.x, start.y)
     end_pt = grid.node(end.x, end.y)
 
@@ -75,22 +82,26 @@ def find_path(board, start, end):
     return path
 
 
-# TODO-TK: snake can crash into itself if it can't chase its tail and near by it
-def get_cut_path(board, snake, food):
+def get_cut_path(board, start_pt, end_pt):
     board_f = deepcopy(board)
+    cut_len = 0
     for cut_len in range(1, board.width * 2):
         tail_pt = board_f.prune_agent_tail(cut_len)
-        path_candidate  = find_path(board_f, snake.head, food)
+        path_candidate  = find_path(board_f, start_pt, end_pt)
         logger.debug('Cut path at length {}: {}'.format(cut_len, path_candidate))
         if path_candidate != []:
-            logger.info('Using cut path to tail tip at length {}'.format(cut_len))
-            path_candidate = find_path(board_f, snake.head, tail_pt)
-            break  # use smallest cut possible
-    return path_candidate
+            logger.info('Returning cut path to tail tip at length {}'.format(cut_len))
+            path_candidate = find_path(board_f, start_pt, tail_pt)
+            break
+    return path_candidate, cut_len
 
 
 def find_disjoint_path(board, path_init, snake, food):
     path_return = find_path(board, food, snake.tip)
+    logger.debug('Return path: {}'.format(path_return))
+    if path_return == []:
+        path_return, _ = get_cut_path(board, food, snake.tip)
+        logger.debug('Trying a cut return path: {}'.format(path_return))
     intersects = set(path_init).intersection(set(path_return))
     logger.debug('Removing intersections: {}'.format(intersects))
     if intersects:
@@ -120,14 +131,17 @@ def get_move(board):
         # find path with exits in consideration
         path_final = find_disjoint_path(board, path_init, snake, food)
     else:
-        tailchase_path = find_path(board, snake.head, snake.tip)
+        tailchase_path = find_path(board, snake.head, snake.tip, trim_tip=True)
         logger.debug('Tail chase path: {}'.format(tailchase_path))
         if tailchase_path:
             logger.info('Using tail chase path')
             path_final = tailchase_path
         else:
-            # TODO-TK: doesn't detour, problem for when we need to during cut paths
-            path_final = get_cut_path(board, snake, food)
+            # TODO-TK: need to implement a reasonable longest path approximation
+            cut_food_path, cut_food_len = get_cut_path(board, snake.head, food)
+            cut_tip_path, cut_tip_len = get_cut_path(board, snake.head, snake.tip)
+            path_final = cut_food_path if cut_food_len <= cut_tip_len else cut_tip_path
+
 
     logger.info("Using path: {}".format(path_final))
     return map_move(snake, Point(*path_final[1]))

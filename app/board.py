@@ -51,6 +51,9 @@ class Board(list):
             self._grid[tip.y][tip.x] = None
         return snake.body[-num_points]
 
+    def pt_distance(self, a, b):
+        return  abs(b.y - a.y) + abs(b.x - a.x)
+
     def _populate_grid(self):
         for snake in self.snakes.itervalues():
             # Excluding tip of snake since we can tail-chase
@@ -70,7 +73,7 @@ class Board(list):
         return len(self._grid)
 
     def __str__(self):
-        return '\n'.join([str(row) for row in self._grid])
+        return '\n'.join([str([1 if i else 0 for i in row]) for row in self._grid])
 
 
 def _parse_food(data):
