@@ -85,22 +85,23 @@ def find_path(board, start, end, trim_tip=False):
 def get_cut_path(board, start_pt, end_pt):
     board_f = deepcopy(board)
     cut_len = 0
-    for cut_len in range(1, board.width * 2):
+    tail_pt = None
+    for cut_len in range(0, board.width * 2):
         tail_pt = board_f.prune_agent_tail(cut_len)
-        path_candidate  = find_path(board_f, start_pt, end_pt)
+        path_candidate = find_path(board_f, start_pt, end_pt)
         logger.debug('Cut path at length {}: {}'.format(cut_len, path_candidate))
         if path_candidate != []:
             logger.info('Returning cut path to tail tip at length {}'.format(cut_len))
             path_candidate = find_path(board_f, start_pt, tail_pt)
             break
-    return path_candidate, cut_len
+    return path_candidate, cut_len, tail_pt
 
 
 def find_disjoint_path(board, path_init, snake, food):
     path_return = find_path(board, food, snake.tip)
     logger.debug('Return path: {}'.format(path_return))
     if path_return == []:
-        path_return, _ = get_cut_path(board, food, snake.tip)
+        path_return, _, _ = get_cut_path(board, food, snake.tip)
         logger.debug('Trying a cut return path: {}'.format(path_return))
     intersects = set(path_init).intersection(set(path_return))
     logger.debug('Removing intersections: {}'.format(intersects))
@@ -118,6 +119,72 @@ def find_disjoint_path(board, path_init, snake, food):
         path = path_init
     return path
 
+# 1. Deep copy graph
+# 2. For all non-Snake nodes, traverse until we get to the destination point
+# 3. Mark yourself as a non-Snake node
+# 4. Return your value + any value returned to you
+
+def get_longest_path(board, head, cut_tail_pt):
+    print board
+    print "Cut tail pt is", cut_tail_pt
+    path_board = deepcopy(board)
+    max_path = []
+    if cut_tail_pt:
+        max_path = long_path_recurse(path_board, head, cut_tail_pt)
+    print "Max path is ", max_path
+    return max_path
+
+def point_exists_not_visited(current_point, direction, board):
+    if direction == 'left':
+        if current_point.x - 1 >= 0 and board[current_point.x - 1][current_point.y] == 0:
+            return Point(current_point.x - 1, current_point.y)
+    elif direction == 'right':
+        if current_point.x + 1 < len(board) and board[current_point.x + 1][current_point.y] == 0:
+            return Point(current_point.x + 1, current_point.y)
+    elif direction == 'up':
+        if current_point.y - 1 >= 0 and board[current_point.x][current_point.y - 1] == 0:
+            return Point(current_point.x, current_point.y - 1)
+    elif direction == 'down':
+        if current_point.y + 1 < len(board) and board[current_point.x][current_point.y + 1] == 0:
+            return Point(current_point, current_point.y + 1)
+    return None
+
+def long_path_recurse(board, current_point, destination_point):
+    if current_point == destination_point:
+        return [current_point]
+
+    path_left = []
+    left_point = point_exists_not_visited(current_point, 'left', board)
+    if left_point:
+        board[current_point.x][current_point.y] = 1
+        path_left.append(long_path_recurse(destination_point, current_point.left, board))
+        board[current_point.x][current_point.y] = 0
+
+    path_right = []
+    right_point = point_exists_not_visited(current_point, 'right', board)
+    if right_point:
+        board[current_point.x][current_point.y] = 1
+        path_right.append(long_path_recurse(destination_point, current_point.left, board))
+        board[current_point.x][current_point.y] = 0
+
+    path_up = []
+    up_point = point_exists_not_visited(current_point, 'up', board)
+    if up_point:
+        board[current_point.x][current_point.y] = 1
+        path_up.append(long_path_recurse(destination_point, current_point.left, board))
+        board[current_point.x][current_point.y] = 0
+
+    path_down = []
+    down_point = point_exists_not_visited(current_point, 'down', board)
+    if down_point:
+        board[current_point.x][current_point.y] = 1
+        path_down.append(long_path_recurse(destination_point, current_point.left, board))
+        board[current_point.x][current_point.y] = 0
+
+    max_list = path_left if len(path_left) > path_right else path_right
+    max_list = path_right if len(path_right) > path_up else path_up
+    max_list = path_up if len(path_up) > path_down else path_down
+    return max_list
 
 def get_move(board):
     snake = board.agent_snake
@@ -125,6 +192,13 @@ def get_move(board):
 
     path_init = find_path(board, snake.head, food)
     logger.debug('Init path: {}'.format(path_init))
+
+    # CC - Testing
+    cut_food_path, cut_food_len, cut_tail_pt_food = get_cut_path(board, snake.head, food)
+    cut_tip_path, cut_tip_len, cut_tail_pt_tip = get_cut_path(board, snake.head, snake.tip)
+    cut_tail_pt = cut_tail_pt_food if cut_food_len <= cut_tip_len else cut_tail_pt_tip
+    path_final = cut_food_path if cut_food_len <= cut_tip_len else cut_tip_path
+    long_path = get_longest_path(board, snake.head, cut_tail_pt)
 
     # check if we can make a path assuming future snake length
     if path_init:
@@ -138,8 +212,8 @@ def get_move(board):
             path_final = tailchase_path
         else:
             # TODO-TK: need to implement a reasonable longest path approximation
-            cut_food_path, cut_food_len = get_cut_path(board, snake.head, food)
-            cut_tip_path, cut_tip_len = get_cut_path(board, snake.head, snake.tip)
+            cut_food_path, cut_food_len, _ = get_cut_path(board, snake.head, food)
+            cut_tip_path, cut_tip_len, _ = get_cut_path(board, snake.head, snake.tip)
             path_final = cut_food_path if cut_food_len <= cut_tip_len else cut_tip_path
 
 
