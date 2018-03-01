@@ -59,7 +59,7 @@ class Board(list):
     def _populate_grid(self):
         for snake in self.snakes.itervalues():
             # Excluding tip of snake since we can tail-chase
-            for point in snake.body[:-1]:
+            for point in snake.body:
                 self._grid[point.y][point.x] = snake
 
         # TK: disabled for now while experimenting with pathfinding library
