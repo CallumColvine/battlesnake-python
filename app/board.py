@@ -46,6 +46,8 @@ class Board(list):
                 return snake
 
     def prune_agent_tail(self, num_points):
+        if num_points == 0:
+            return None
         snake = self.snakes[self.agent_id]
         for tip in snake.tail[-num_points:]:
             self._grid[tip.y][tip.x] = None

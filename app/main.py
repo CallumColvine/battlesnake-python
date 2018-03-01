@@ -86,12 +86,12 @@ def find_path(board, start, end, trim_tip=False):
 def get_cut_path(board, start_pt, end_pt):
     board_f = deepcopy(board)
     cut_len = 0
-    for cut_len in range(1, board.width * 2):
+    for cut_len in range(0, min(len(board.agent_snake.tail), board.width * 2)):
         tail_pt = board_f.prune_agent_tail(cut_len)
-        path_candidate  = find_path(board_f, start_pt, end_pt)
+        path_candidate = find_path(board_f, start_pt, end_pt)
         logger.debug('Cut path at length {}: {}'.format(cut_len, path_candidate))
-        if path_candidate != []:
-            logger.info('Returning cut path to tail tip at length {}'.format(cut_len))
+        if tail_pt and len(path_candidate) > 1:
+            logger.debug('Returning cut path to end point {} at length {}'.format(end_pt,cut_len))
             path_candidate = find_path(board_f, start_pt, tail_pt)
             break
     return path_candidate, cut_len, tail_pt
@@ -101,7 +101,7 @@ def find_disjoint_path(board, snake, food):
     path_init = find_path(board, snake.head, food)
     logger.debug('Init path: {}'.format(path_init))
 
-    path_return = find_path(board, food, snake.tip)
+    path_return = find_path(board, food, snake.tip, trim_tip=True)
     logger.debug('Return path: {}'.format(path_return))
 
     intersects = set(path_init).intersection(set(path_return))
@@ -122,29 +122,29 @@ def find_disjoint_path(board, snake, food):
     return_exists = True if path_return else False
     return path, return_exists
 
-def get_least_short_path(board, snake, cut_tail_pt, path_final):
+
+def get_longer_path(board, snake, cut_tail_pt, path_final):
     paths = []
-    board[snake.head.y][snake.head.x] = 1
-    print('!! Getting longest path space fill')
     # Check if it's within the bounds of the board and it's NOT occupied
-    if snake.head.y - 1 >= 0 and board[snake.head.y - 1][snake.head.x] != 1:
-        paths.append(find_path(
-            board, Point(snake.head.y - 1, snake.head.x), cut_tail_pt))
-    if snake.head.y + 1 < board.width and board[snake.head.y + 1][snake.head.x] != 1:
-        paths.append(find_path(
-            board, Point(snake.head.y + 1, snake.head.x), cut_tail_pt))
-    if snake.head.x - 1 >= 0 and board[snake.head.y][snake.head.x - 1] != 1:
-        paths.append(find_path(
-            board, Point(snake.head.y, snake.head.x - 1), cut_tail_pt))
-    if snake.head.x + 1 < board.height and board[snake.head.y][snake.head.x + 1] != 1:
-        paths.append(find_path(
-            board, Point(snake.head.y, snake.head.x + 1), cut_tail_pt))
-    logger.info('Space filling paths are: {}'.format(paths))
+    if snake.head.y - 1 >= 0 and board[snake.head.y - 1][snake.head.x] is None:
+        paths.append(find_path(board, Point(snake.head.x, snake.head.y - 1), cut_tail_pt))
+
+    if snake.head.y + 1 < board.height and board[snake.head.y + 1][snake.head.x] is None:
+        paths.append(find_path(board, Point(snake.head.x, snake.head.y + 1), cut_tail_pt))
+
+    if snake.head.x - 1 >= 0 and board[snake.head.y][snake.head.x - 1] is None:
+        paths.append(find_path(board, Point(snake.head.x - 1, snake.head.y), cut_tail_pt))
+
+    if snake.head.x + 1 < board.width and board[snake.head.y][snake.head.x + 1] is None:
+        paths.append(find_path(board, Point(snake.head.x + 1, snake.head.y), cut_tail_pt))
+
+    logger.debug('Space filling paths are: {}'.format(paths))
     for path in paths:
         logger.debug('Considering space fill path: {}'.format(path))
         if path and len(path) > len(path_final):
             path_final = path
     return path_final
+
 
 def get_move(board):
     snake = board.agent_snake
@@ -154,31 +154,33 @@ def get_move(board):
     path_init, return_exists = find_disjoint_path(board, snake, food)
 
     if path_init and return_exists:
+        logger.info('Using optimal path')
         path_final = path_init
     else:
-        tailchase_path = find_path(board, snake.head, snake.tip, trim_tip=True)
-        logger.debug('Tail chase path: {}'.format(tailchase_path))
-        if len(tailchase_path) > 1:
-            logger.info('Using tail chase path')
-            path_final = tailchase_path
+        logger.debug('Not using optimal path')
+        cut_food_path, cut_food_len, food_pt = get_cut_path(board, snake.head, food)
+
+        if cut_food_len < len(cut_food_path):
+            logger.info('Using cut food path')
+            path_final = cut_food_path
         else:
-            if path_init:
-                logger.info('Reverting to init path.')
-                path_final = path_init
+            logger.debug('Not using cut food path')
+            path_food_longer = get_longer_path(board, snake, food_pt, cut_food_path)
+            if cut_food_len < len(path_food_longer):
+                path_final = path_food_longer
+                logger.info('Using longer cut food path')
             else:
-                # TODO-TK: need to implement a reasonable longest path approximation
-                cut_food_path, cut_food_len, food_tail_pt = get_cut_path(board, snake.head, food)
-                cut_tip_path, cut_tip_len, cut_tail_pt = get_cut_path(board, snake.head, snake.tip)
-                path_final = cut_food_path if cut_food_len <= cut_tip_len and cut_food_path else cut_tip_path
-                target_point = food_tail_pt if cut_food_len <= cut_tip_len and cut_food_path else cut_tail_pt
-                # goal_point = Point(path_final[-1][0], path_final[-1][1])
-                path_shorter = get_least_short_path(board, snake, target_point, path_final)
-                if path_shorter:
-                    path_final = path_shorter
+                logger.debug('Not using longer cut food path')
+                cut_tip_path, cut_tip_len, cut_tip_pt = get_cut_path(board, snake.head, snake.tip)
+                path_tip_longer = get_longer_path(board, snake, cut_tip_pt, cut_tip_path)
+                if cut_tip_len < len(path_tip_longer):
+                    logger.info('Using longer cut tip path')
+                    path_final = path_tip_longer
+                else:
+                    logger.debug('Using init path')
+                    path_final = path_init
 
-
-
-    logger.info("Using path: {}".format(path_final))
+    logger.info("Path: {}".format(path_final))
     return map_move(snake, Point(*path_final[1]))
 
 
