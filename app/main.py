@@ -158,9 +158,15 @@ def get_longer_path(board, snake, cut_tail_pt, path_final, prune_tip=False):
     return path_final
 
 
+def closest_food(board):
+    head = board.agent_snake.head
+    dests = {board.pt_distance(head, f):f for f in board.food}
+    return dests[min(dests.keys())]
+
+
 def get_move(board):
     snake = board.agent_snake
-    food = board.food[0]  # TODO-TK: needs "closest food" functionality
+    food = closest_food(board)
 
     # find path with exits in consideration
     path_init, return_exists = find_disjoint_path(board, snake, food)
