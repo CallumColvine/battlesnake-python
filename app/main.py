@@ -118,6 +118,29 @@ def find_disjoint_path(board, path_init, snake, food):
         path = path_init
     return path
 
+def get_least_short_path(board, snake, cut_tail_pt, path_final):
+    paths = []
+    board[snake.head.y][snake.head.x] = 1
+    print('!! Getting longest path space fill')
+    # Check if it's within the bounds of the board and it's NOT occupied
+    if snake.head.y - 1 >= 0 and board[snake.head.y - 1][snake.head.x] != 1:
+        paths.append(find_disjoint_path(
+            board, Point(snake.head.y - 1, snake.head.x), snake, cut_tail_pt))
+    if snake.head.y + 1 < board.width and board[snake.head.y + 1][snake.head.x] != 1:
+        paths.append(find_disjoint_path(
+            board, Point(snake.head.y + 1, snake.head.x), snake, cut_tail_pt))
+    if snake.head.x - 1 >= 0 and board[snake.head.y][snake.head.x - 1] != 1:
+        paths.append(find_disjoint_path(
+            board, Point(snake.head.y, snake.head.x - 1), snake, cut_tail_pt))
+    if snake.head.x + 1 < board.height and board[snake.head.y][snake.head.x + 1] != 1:
+        paths.append(find_disjoint_path(
+            board, Point(snake.head.y, snake.head.x + 1), snake, cut_tail_pt))
+    logger.info('Space filling paths are: {}'.format(paths))
+    for path in paths:
+        logger.debug('Considering space fill path: {}'.format(path))
+        if path and len(path) > len(path_final):
+            path_final = path
+    return path_final
 
 def get_move(board):
     snake = board.agent_snake
@@ -141,6 +164,10 @@ def get_move(board):
             cut_food_path, cut_food_len = get_cut_path(board, snake.head, food)
             cut_tip_path, cut_tip_len = get_cut_path(board, snake.head, snake.tip)
             path_final = cut_food_path if cut_food_len <= cut_tip_len else cut_tip_path
+            path_shorter = get_least_short_path(board, snake, cut_tail_pt, path_final)
+            if path_shorter:
+                path_final = path_shorter
+
 
 
     logger.info("Using path: {}".format(path_final))
