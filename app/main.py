@@ -94,7 +94,7 @@ def get_cut_path(board, start_pt, end_pt):
             logger.debug('Returning cut path to end point {} at length {}'.format(end_pt,cut_len))
             path_candidate = find_path(board_f, start_pt, tail_pt)
             break
-    return path_candidate, cut_len, tail_pt
+    return path_candidate, cut_len
 
 
 def find_disjoint_path(board, snake, food):
