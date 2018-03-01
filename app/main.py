@@ -25,6 +25,15 @@ def _get_logger():
 logger = _get_logger()
 
 
+def fibrange(board):
+    # yield 0 and start series from 1/2 to skip returning 1 twice
+    yield 0
+    a, b = 1, 2
+    while a < len(board.agent_snake.tail):
+        yield a
+        a, b = b, a + b
+
+
 @bottle.route('/static/<path:path>')
 def static(path):
     return bottle.static_file(path, root='static/')
@@ -89,7 +98,7 @@ def find_path(board, start, end, trim_tip=False, prune_tip=False):
 def get_cut_path(board, start_pt, end_pt):
     board_f = deepcopy(board)
     cut_len = 0
-    for cut_len in range(0, min(len(board.agent_snake.tail), board.width)):
+    for cut_len in fibrange(board):
         tail_pt = board_f.prune_agent_tail(cut_len)
         path_candidate = find_path(board_f, start_pt, end_pt)
         logger.debug('Cut path at length {}: {}'.format(cut_len, path_candidate))
