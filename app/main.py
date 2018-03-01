@@ -67,8 +67,11 @@ def map_move(snake, point):
 
 # trim_tip necessary due to data anomaly we're getting from the server
 # unable to fully remove because many nodes are in same position, can collide if too close (hence > 1 condition)
-def find_path(board, start, end, trim_tip=False):
-    if trim_tip and board.pt_distance(start, end) > 1:
+def find_path(board, start, end, trim_tip=False, prune_tip=False):
+    tip_stack = board.agent_snake.tip_stack()
+    head_distance = board.pt_distance(start, end)
+    if prune_tip or trim_tip and head_distance > tip_stack:
+        logger.debug('Trimming tip of snake with {} tips stacked and {} away.'.format(tip_stack, head_distance))
         board_c = deepcopy(board)
         board_c[end.y][end.x] = None
         grid = Grid(matrix=board_c)
@@ -123,20 +126,20 @@ def find_disjoint_path(board, snake, food):
     return path, return_exists
 
 
-def get_longer_path(board, snake, cut_tail_pt, path_final):
+def get_longer_path(board, snake, cut_tail_pt, path_final, prune_tip=False):
     paths = []
     # Check if it's within the bounds of the board and it's NOT occupied
     if snake.head.y - 1 >= 0 and board[snake.head.y - 1][snake.head.x] is None:
-        paths.append(find_path(board, Point(snake.head.x, snake.head.y - 1), cut_tail_pt))
+        paths.append(find_path(board, Point(snake.head.x, snake.head.y - 1), cut_tail_pt, prune_tip=prune_tip))
 
     if snake.head.y + 1 < board.height and board[snake.head.y + 1][snake.head.x] is None:
-        paths.append(find_path(board, Point(snake.head.x, snake.head.y + 1), cut_tail_pt))
+        paths.append(find_path(board, Point(snake.head.x, snake.head.y + 1), cut_tail_pt, prune_tip=prune_tip))
 
     if snake.head.x - 1 >= 0 and board[snake.head.y][snake.head.x - 1] is None:
-        paths.append(find_path(board, Point(snake.head.x - 1, snake.head.y), cut_tail_pt))
+        paths.append(find_path(board, Point(snake.head.x - 1, snake.head.y), cut_tail_pt, prune_tip=prune_tip))
 
     if snake.head.x + 1 < board.width and board[snake.head.y][snake.head.x + 1] is None:
-        paths.append(find_path(board, Point(snake.head.x + 1, snake.head.y), cut_tail_pt))
+        paths.append(find_path(board, Point(snake.head.x + 1, snake.head.y), cut_tail_pt, prune_tip=prune_tip))
 
     logger.debug('Space filling paths are: {}'.format(paths))
     for path in paths:
@@ -172,7 +175,7 @@ def get_move(board):
             else:
                 logger.debug('Not using longer cut food path')
                 cut_tip_path, cut_tip_len, cut_tip_pt = get_cut_path(board, snake.head, snake.tip)
-                path_tip_longer = get_longer_path(board, snake, cut_tip_pt, cut_tip_path)
+                path_tip_longer = get_longer_path(board, snake, cut_tip_pt, cut_tip_path, prune_tip=True)
                 if cut_tip_len < len(path_tip_longer):
                     logger.info('Using longer cut tip path')
                     path_final = path_tip_longer

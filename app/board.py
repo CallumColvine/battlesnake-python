@@ -27,6 +27,9 @@ class Snake(object):
     def tail(self):
         return self.body[1:]
 
+    def tip_stack(self):
+        return sum([1 if i == self.body[-1] else 0 for i in self.body])
+
 
 class Board(list):
     def __init__(self, agent_id, width, height, snakes, food):
@@ -49,8 +52,10 @@ class Board(list):
         if num_points == 0:
             return None
         snake = self.snakes[self.agent_id]
-        for tip in snake.tail[-num_points:]:
+        for tip in snake.tail:
             self._grid[tip.y][tip.x] = None
+        for tip in snake.tail[:-num_points]:
+            self._grid[tip.y][tip.x] = snake
         return snake.body[-num_points]
 
     def pt_distance(self, a, b):
