@@ -89,7 +89,7 @@ def find_path(board, start, end, trim_tip=False, prune_tip=False):
 def get_cut_path(board, start_pt, end_pt):
     board_f = deepcopy(board)
     cut_len = 0
-    for cut_len in range(0, min(len(board.agent_snake.tail), board.width * 2)):
+    for cut_len in range(0, min(len(board.agent_snake.tail), board.width)):
         tail_pt = board_f.prune_agent_tail(cut_len)
         path_candidate = find_path(board_f, start_pt, end_pt)
         logger.debug('Cut path at length {}: {}'.format(cut_len, path_candidate))
@@ -145,7 +145,7 @@ def get_longer_path(board, snake, cut_tail_pt, path_final, prune_tip=False):
     for path in paths:
         logger.debug('Considering space fill path: {}'.format(path))
         if path and len(path) > len(path_final):
-            path_final = path
+            path_final = [snake.head] + path  # TODO-TK: filler, need next move to not be based on [1]th entry
     return path_final
 
 
@@ -183,8 +183,9 @@ def get_move(board):
                     logger.debug('Using init path')
                     path_final = path_init
 
-    logger.info("Path: {}".format(path_final))
-    return map_move(snake, Point(*path_final[1]))
+    next_move = map_move(snake, Point(*path_final[1]))
+    logger.info("Making next move {} with path: {}".format(next_move, path_final))
+    return next_move
 
 
 @bottle.post('/move')
