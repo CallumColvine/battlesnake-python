@@ -67,8 +67,14 @@ def map_move(snake, point):
 
 # trim_tip necessary due to data anomaly we're getting from the server
 # unable to fully remove because many nodes are in same position, can collide if too close (hence > 1 condition)
-def find_path(board, start, end):
-    grid = Grid(matrix=board)
+def find_path(board, start, end, trim_tip=False):
+    if trim_tip and board.pt_distance(start, end) > 1:
+        board_c = deepcopy(board)
+        board_c[end.y][end.x] = None
+        grid = Grid(matrix=board_c)
+    else:
+        grid = Grid(matrix=board)
+
     start_pt = grid.node(start.x, start.y)
     end_pt = grid.node(end.x, end.y)
 
@@ -127,7 +133,7 @@ def get_move(board):
     if path_init and return_exists:
         path_final = path_init
     else:
-        tailchase_path = find_path(board, snake.head, snake.tip)
+        tailchase_path = find_path(board, snake.head, snake.tip, trim_tip=True)
         logger.debug('Tail chase path: {}'.format(tailchase_path))
         if len(tailchase_path) > 1:
             logger.info('Using tail chase path')
