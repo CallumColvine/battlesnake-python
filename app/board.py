@@ -90,9 +90,9 @@ def _parse_food(data):
 def _parse_snakes(data):
     snakes = {}
     for snake in data['snakes']['data']:
-        body = [Point(point['x'], point['y']) for point in snake['body']['data']]
-        snakes[snake['id']] = Snake(body, snake['length'], snake['health'], snake['id'])
-
+        if snake.get('health', 0) > 0:
+            body = [Point(point['x'], point['y']) for point in snake['body']['data']]
+            snakes[snake['id']] = Snake(body, snake['length'], snake['health'], snake['id'])
     return snakes
 
 
