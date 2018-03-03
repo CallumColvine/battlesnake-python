@@ -216,7 +216,7 @@ def get_food(board):
     snake = board.agent_snake
     if snake.health < 30 or len(snake) < 20:
         return closest_food(board, snake.head)
-    elif snake.health > 50:
+    elif snake.health > 80:
         return snake.tip
     return closest_to_center_food(board)
 
@@ -278,5 +278,5 @@ if __name__ == '__main__':
     bottle.run(
         application,
         host=os.getenv('IP', '0.0.0.0'),
-        port=os.getenv('PORT', '8080'),
+        port=os.getenv('PORT', '8027'),
         debug = True)
