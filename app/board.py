@@ -55,6 +55,8 @@ class Board(list):
                 return snake
 
     def is_opponent_head(self, x, y):
+        if x < 0 or x == self.width or y < 0 or y == self.height:
+            return False
         cell = self._grid[y][x]
         if isinstance(cell, Snake):
             head = self.snakes[cell.id].head

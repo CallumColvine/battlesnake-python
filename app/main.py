@@ -203,15 +203,27 @@ def get_longer_path(board, snake, cut_tail_pt, path_final, prune_tip=False):
     return path_final
 
 
-def closest_food(board):
-    head = board.agent_snake.head
-    dests = {board.pt_distance(head, f):f for f in board.food}
+def closest_food(board, start_pt):
+    dests = {board.pt_distance(start_pt, f):f for f in board.food}
     return dests[min(dests.keys())]
+
+
+def closest_to_center_food(board):
+    return closest_food(board, Point(board.width / 2, board.height / 2))
+
+
+def get_food(board):
+    snake = board.agent_snake
+    if snake.health < 30 or len(snake) < 20:
+        return closest_food(board, snake.head)
+    elif snake.health > 50:
+        return snake.tip
+    return closest_to_center_food(board)
 
 
 def get_move(board):
     snake = board.agent_snake
-    food = closest_food(board)
+    food = get_food(board)
 
     # find path with exits in consideration
     path_init, return_exists = find_disjoint_path(board, snake, food)
