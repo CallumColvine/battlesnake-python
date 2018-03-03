@@ -98,17 +98,20 @@ class HeuristicFinder(AStarFinder):
         return node.x == self.board.width - 1 or node.x == 0 or node.y == self.board.height - 1 or node.y == 0
 
     def compute_edge_score(self, node_a, node_b):
+        score = 0
         manhat = manhatten(abs(node_a.x - node_b.x), abs(node_a.y - node_b.y))
         if self._is_frame_cell(node_a):
-            return manhat / 2
+            score = manhat / 2
         elif self._empty_cell_opponent_risk(node_a):
             perimeter_snake_heads = self._perimeter_snake_heads(node_a)
             if self.board.agent_id in (snake.id for snake in perimeter_snake_heads):
                 if all([len(self.board.agent_snake) > len(perimeter_snake) for perimeter_snake in perimeter_snake_heads if perimeter_snake.id != self.board.agent_id]):
-                    return - manhat / 2
-            return manhat
+                    score = - manhat / 2
+            score = manhat
         else:
-            return 0
+            score = 0
+        logger.debug('Exporting heuristic score {}'.format(score))
+        return score
 
     def apply_heuristic(self, node_a, node_b, _=None):
         return self.compute_edge_score(node_a, node_b) + manhatten(abs(node_a.x - node_b.x), abs(node_a.y - node_b.y))
@@ -261,5 +264,5 @@ if __name__ == '__main__':
     bottle.run(
         application,
         host=os.getenv('IP', '0.0.0.0'),
-        port=os.getenv('PORT', '8080'),
+        port=os.getenv('PORT', '8027'),
         debug = True)
