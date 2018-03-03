@@ -10,7 +10,7 @@ from pathfinding.finder.a_star import AStarFinder
 
 import bottle
 
-from board import get_board, Point, Snake
+from board import get_board, Point, Snake, Food
 
 
 def _get_logger():
@@ -94,24 +94,26 @@ class HeuristicFinder(AStarFinder):
         coord_cells = [(coord, self.board[coord[1]][coord[0]]) for coord in coords]
         return [cell for coord, cell in coord_cells if isinstance(cell, Snake) and cell.is_head(coord[0], coord[1])]
 
+    def _is_food_in_perimeter(self, node):
+        coords = [(node.x - 1, node.y), (node.x + 1, node.y), (node.x, node.y - 1), (node.x, node.y + 1)]
+        return any((isinstance(self.board[coord[1]][coord[0]], Food) for coord in coords))
+
     def _is_frame_cell(self, node):
-        return node.x == self.board.width - 1 or node.x == 0 or node.y == self.board.height - 1 or node.y == 0
+        return node.x > self.board.width / 8 or node.x == 0 or node.y > self.board.height / 8 or node.y == 0
 
     def compute_edge_score(self, node_a, node_b):
-        score = 0
         manhat = manhatten(abs(node_a.x - node_b.x), abs(node_a.y - node_b.y))
+        init_score = 0
         if self._is_frame_cell(node_a):
-            score = manhat / 2
+            init_score = manhat * 100
         elif self._empty_cell_opponent_risk(node_a):
             perimeter_snake_heads = self._perimeter_snake_heads(node_a)
             if self.board.agent_id in (snake.id for snake in perimeter_snake_heads):
                 if all([len(self.board.agent_snake) > len(perimeter_snake) for perimeter_snake in perimeter_snake_heads if perimeter_snake.id != self.board.agent_id]):
-                    score = - manhat / 2
-            score = manhat
-        else:
-            score = 0
-        logger.debug('Exporting heuristic score {}'.format(score))
-        return score
+                    init_score = - manhat if self._is_food_in_perimeter(node_a) else - manhat / 2
+            init_score = manhat * 2 if self._is_food_in_perimeter(node_a) else manhat
+
+        return init_score
 
     def apply_heuristic(self, node_a, node_b, _=None):
         return self.compute_edge_score(node_a, node_b) + manhatten(abs(node_a.x - node_b.x), abs(node_a.y - node_b.y))
@@ -201,15 +203,27 @@ def get_longer_path(board, snake, cut_tail_pt, path_final, prune_tip=False):
     return path_final
 
 
-def closest_food(board):
-    head = board.agent_snake.head
-    dests = {board.pt_distance(head, f):f for f in board.food}
+def closest_food(board, start_pt):
+    dests = {board.pt_distance(start_pt, f):f for f in board.food}
     return dests[min(dests.keys())]
+
+
+def closest_to_center_food(board):
+    return closest_food(board, Point(board.width / 2, board.height / 2))
+
+
+def get_food(board):
+    snake = board.agent_snake
+    if snake.health < 30 or len(snake) < 20:
+        return closest_food(board, snake.head)
+    elif snake.health > 50:
+        return snake.tip
+    return closest_to_center_food(board)
 
 
 def get_move(board):
     snake = board.agent_snake
-    food = closest_food(board)
+    food = get_food(board)
 
     # find path with exits in consideration
     path_init, return_exists = find_disjoint_path(board, snake, food)
@@ -264,5 +278,5 @@ if __name__ == '__main__':
     bottle.run(
         application,
         host=os.getenv('IP', '0.0.0.0'),
-        port=os.getenv('PORT', '8027'),
+        port=os.getenv('PORT', '8080'),
         debug = True)
