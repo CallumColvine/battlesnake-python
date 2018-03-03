@@ -76,6 +76,11 @@ class Board(list):
     def pt_distance(self, a, b):
         return  abs(b.y - a.y) + abs(b.x - a.x)
 
+    def get_cell(self, x, y):
+        if x < 0 or x == self.width or y < 0 or y == self.height:
+            return None
+        return self._grid[y][x]
+
     def _populate_grid(self):
         for snake in self.snakes.itervalues():
             # Excluding tip of snake since we can tail-chase
