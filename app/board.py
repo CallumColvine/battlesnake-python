@@ -30,6 +30,12 @@ class Snake(object):
     def tip_stack(self):
         return sum([1 if i == self.body[-1] else 0 for i in self.body])
 
+    def is_head(self, x, y):
+        return self.head.x == x and self.head.y == y
+
+    def __len__(self):
+        return len(self.body)
+
 
 class Board(list):
     def __init__(self, agent_id, width, height, snakes, food):
@@ -47,6 +53,13 @@ class Board(list):
         for snake in self.snakes.itervalues():
             if snake.id == self.agent_id:
                 return snake
+
+    def is_opponent_head(self, x, y):
+        cell = self._grid[y][x]
+        if isinstance(cell, Snake):
+            head = self.snakes[cell.id].head
+            return cell.id != self.agent_id and head.x == x and head.y == y
+        return False
 
     def prune_agent_tail(self, num_points):
         if num_points == 0:

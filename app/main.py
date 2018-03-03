@@ -5,11 +5,12 @@ import sys
 from copy import deepcopy
 
 from pathfinding.core.grid import Grid
+from pathfinding.core.heuristic import manhatten
 from pathfinding.finder.a_star import AStarFinder
 
 import bottle
 
-from board import get_board, Point
+from board import get_board, Point, Snake
 
 
 def _get_logger():
@@ -74,6 +75,45 @@ def map_move(snake, point):
         return 'up'
 
 
+class HeuristicFinder(AStarFinder):
+    def __init__(self, board, *args, **kwargs):
+        super(HeuristicFinder, self).__init__(*args, **kwargs)
+        self.board = board
+
+    def _empty_cell_opponent_risk(self, node):
+        if self.board[node.y][node.x] is None:
+            return self.board.is_opponent_head(node.x - 1, node.y)\
+                or self.board.is_opponent_head(node.x + 1, node.y)\
+                or self.board.is_opponent_head(node.x, node.y - 1)\
+                or self.board.is_opponent_head(node.x, node.y + 1)
+
+        return False
+
+    def _perimeter_snake_heads(self, node):
+        coords = [(node.x - 1, node.y), (node.x + 1, node.y), (node.x, node.y - 1), (node.x, node.y + 1)]
+        coord_cells = [(coord, self.board[coord[1]][coord[0]]) for coord in coords]
+        return [cell for coord, cell in coord_cells if isinstance(cell, Snake) and cell.is_head(coord[0], coord[1])]
+
+    def _is_frame_cell(self, node):
+        return node.x == self.board.width - 1 or node.x == 0 or node.y == self.board.height - 1 or node.y == 0
+
+    def compute_edge_score(self, node_a, node_b):
+        manhat = manhatten(abs(node_a.x - node_b.x), abs(node_a.y - node_b.y))
+        if self._is_frame_cell(node_a):
+            return manhat / 2
+        elif self._empty_cell_opponent_risk(node_a):
+            perimeter_snake_heads = self._perimeter_snake_heads(node_a)
+            if self.board.agent_id in (snake.id for snake in perimeter_snake_heads):
+                if all([len(self.board.agent_snake) > len(perimeter_snake) for perimeter_snake in perimeter_snake_heads if perimeter_snake.id != self.board.agent_id]):
+                    return - manhat / 2
+            return manhat
+        else:
+            return 0
+
+    def apply_heuristic(self, node_a, node_b, _=None):
+        return self.compute_edge_score(node_a, node_b) + manhatten(abs(node_a.x - node_b.x), abs(node_a.y - node_b.y))
+
+
 # trim_tip necessary due to data anomaly we're getting from the server
 # unable to fully remove because many nodes are in same position, can collide if too close (hence > 1 condition)
 def find_path(board, start, end, trim_tip=False, prune_tip=False):
@@ -90,7 +130,7 @@ def find_path(board, start, end, trim_tip=False, prune_tip=False):
     start_pt = grid.node(start.x, start.y)
     end_pt = grid.node(end.x, end.y)
 
-    finder = AStarFinder()
+    finder = HeuristicFinder(board)
     path, _ = finder.find_path(start_pt, end_pt, grid)
     return path
 
