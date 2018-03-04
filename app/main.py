@@ -227,8 +227,8 @@ def get_destination(board):
     snake = board.agent_snake
     if snake.health < 75 or len(snake) < 20:
         if snake.health > 30:
-            return closest_food(board, snake.head)
-        return closest_to_center_food(board)
+            return closest_to_center_food(board)
+        return closest_food(board, snake.head)
         logger.debug('Choosing closest food as destination')
     if len(board.snakes) == 2 and snake.health > 90:
         for snake_id in board.snakes.keys():
