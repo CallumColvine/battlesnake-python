@@ -55,7 +55,7 @@ class Board(list):
                 return snake
 
     def is_opponent_head(self, x, y):
-        if x < 0 or x == self.width or y < 0 or y == self.height:
+        if self._out_of_bounds(x, y):
             return False
         cell = self._grid[y][x]
         if isinstance(cell, Snake):
@@ -77,9 +77,13 @@ class Board(list):
         return  abs(b.y - a.y) + abs(b.x - a.x)
 
     def get_cell(self, x, y):
-        if x < 0 or x == self.width or y < 0 or y == self.height:
+        if self._out_of_bounds(x, y):
             return None
         return self._grid[y][x]
+
+    def _out_of_bounds(self, x, y):
+        return x < 0 or x == self.width or y < 0 or y == self.height
+
 
     def _populate_grid(self):
         for snake in self.snakes.itervalues():
@@ -93,6 +97,8 @@ class Board(list):
 
     def __getitem__(self, arg):
         if isinstance(arg, Point):
+            if self._out_of_bounds(arg.x, arg.y):
+                return None
             return self._grid[arg.y][arg.x]
         return self._grid[arg]
 

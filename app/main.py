@@ -116,7 +116,7 @@ class HeuristicFinder(AStarFinder):
         if self._is_frame_cell(node_a):
             init_score += manhat
 
-        return food_in_perimeter * init_score + manhatten(abs(self.board.width / 2 - node_a.x), abs(self.board.height / 2 - node_b.y)) * 2
+        return food_in_perimeter + init_score + manhatten(abs(self.board.width / 2 - node_a.x), abs(self.board.height / 2 - node_b.y)) * 10
 
     def apply_heuristic(self, node_a, node_b, _=None):
         return self.compute_edge_score(node_a, node_b) + manhatten(abs(node_a.x - node_b.x), abs(node_a.y - node_b.y))
@@ -225,16 +225,26 @@ def is_shouldering_opponent(board):
 
 def get_destination(board):
     snake = board.agent_snake
-    if is_shouldering_opponent(board):
-        if snake.health >= 80:
-            return snake.tip
-        else:
-            return closest_to_center_food(board)
-    if snake.health < 30 or len(snake) < 20:
-        return closest_food(board, snake.head)
-    elif snake.health > 75 and snake.health < 80:
-        return snake.tip
-    return Point(board.width / 2, board.height / 2)
+    if snake.health < 75 or len(snake) < 20:
+        if snake.health > 30:
+            return closest_food(board, snake.head)
+        return closest_to_center_food(board)
+        logger.debug('Choosing closest food as destination')
+    if len(board.snakes) == 2 and snake.health > 90:
+        for snake_id in board.snakes.keys():
+            if snake_id != board.agent_id:
+                opp_snake = board.snakes[snake_id]
+                opp_head = opp_snake.body[0]
+                opp_neck = opp_snake.body[1]
+                x = (opp_head.x - opp_neck.x) * 2
+                y = (opp_head.y - opp_neck.y) * 2
+                point = Point(opp_head.x + x, opp_head.x + y)
+                if board[point]:
+                    logger.debug('Choosing front of 1v1 opponent as destination')
+                    return point
+    if snake.health > 50:
+        logger.debug('Choosing closest to center destination')
+    return snake.tip
 
 
 def get_move(board):
