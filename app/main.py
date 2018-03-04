@@ -225,7 +225,7 @@ def is_shouldering_opponent(board):
 
 def get_destination(board):
     snake = board.agent_snake
-    if snake.health > 50:
+    if snake.health > 50 and len(snake) > 16:
         logger.debug('Choosing closest to center food as destination')
         return closest_to_center_food(board)
     logger.debug('Choosing closest food as destination')
