@@ -278,6 +278,7 @@ def get_move(board):
                 else:
                     logger.debug('Using last resort path')
                     path_final = path_food_longer if cut_food_len < cut_tip_len else path_tip_longer
+                    path_final = path_final or path_food_longer or path_tip_longer or path_init
 
     next_move = map_move(snake, Point(*path_final[1]))
     logger.info("Making next move {} with path: {}".format(next_move, path_final))
