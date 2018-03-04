@@ -225,7 +225,7 @@ def is_shouldering_opponent(board):
 
 def get_destination(board):
     snake = board.agent_snake
-    if snake.health < 75 or len(snake) < 20:
+    if snake.health < 90 or len(snake) < 20:
         if snake.health > 30:
             logger.debug('Choosing closest to center food as destination')
             return closest_to_center_food(board)
@@ -292,7 +292,8 @@ def move():
     board = get_board(data)
     return {
         'move': get_move(board),
-        'taunt': 'battlesnake-python!'
+        'taunt': 'learning...',
+
     }
 
 
