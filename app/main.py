@@ -99,7 +99,7 @@ class HeuristicFinder(AStarFinder):
         return sum((isinstance(self.board.get_cell(*coord), Food) for coord in coords))
 
     def _is_frame_cell(self, node):
-        return node.x > self.board.width / 4 or node.x == 0 or node.y > self.board.height / 4 or node.y == 0
+        return node.x > self.board.width / 8 or node.x == 0 or node.y > self.board.height / 8 or node.y == 0
 
     def compute_edge_score(self, node_a, node_b):
         food_in_perimeter = self._food_in_perimeter(node_a)
@@ -116,7 +116,7 @@ class HeuristicFinder(AStarFinder):
         if self._is_frame_cell(node_a):
             init_score += manhat
 
-        return food_in_perimeter + init_score + manhatten(abs(self.board.width / 2 - node_a.x), abs(self.board.height / 2 - node_b.y)) * 10
+        return food_in_perimeter + init_score + manhatten(abs(self.board.width / 2 - node_a.x), abs(self.board.height / 2 - node_b.y))
 
     def apply_heuristic(self, node_a, node_b, _=None):
         return self.compute_edge_score(node_a, node_b) + manhatten(abs(node_a.x - node_b.x), abs(node_a.y - node_b.y))
@@ -227,23 +227,22 @@ def get_destination(board):
     snake = board.agent_snake
     if snake.health < 75 or len(snake) < 20:
         if snake.health > 30:
+            logger.debug('Choosing closest to center food as destination')
             return closest_to_center_food(board)
-        return closest_food(board, snake.head)
         logger.debug('Choosing closest food as destination')
-    if len(board.snakes) == 2 and snake.health > 90:
-        for snake_id in board.snakes.keys():
-            if snake_id != board.agent_id:
-                opp_snake = board.snakes[snake_id]
-                opp_head = opp_snake.body[0]
-                opp_neck = opp_snake.body[1]
-                x = (opp_head.x - opp_neck.x) * 2
-                y = (opp_head.y - opp_neck.y) * 2
-                point = Point(opp_head.x + x, opp_head.x + y)
-                if board[point]:
-                    logger.debug('Choosing front of 1v1 opponent as destination')
-                    return point
-    if snake.health > 50:
-        logger.debug('Choosing closest to center destination')
+        return closest_food(board, snake.head)
+    #if len(board.snakes) == 2 and snake.health > 90:
+    #    for snake_id in board.snakes.keys():
+    #        if snake_id != board.agent_id:
+    #            opp_snake = board.snakes[snake_id]
+    #            opp_head = opp_snake.body[0]
+    #            opp_neck = opp_snake.body[1]
+    #            x = (opp_head.x - opp_neck.x) * 2
+    #            y = (opp_head.y - opp_neck.y) * 2
+    #            point = Point(opp_head.x + x, opp_head.x + y)
+    #            if board[point]:
+    #                logger.debug('Choosing front of 1v1 opponent as destination')
+    #                return point
     return snake.tip
 
 
