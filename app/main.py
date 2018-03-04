@@ -47,7 +47,7 @@ def start():
     board_width = data['width']
     board_height = data['height']
 
-    head_url = '%s://%s/static/head.png' % (
+    head_url = '%s://%s/static/head.gif' % (
         bottle.request.urlparts.scheme,
         bottle.request.urlparts.netloc
     )
@@ -225,7 +225,7 @@ def is_shouldering_opponent(board):
 
 def get_destination(board):
     snake = board.agent_snake
-    if snake.health > 30:
+    if snake.health > 50:
         logger.debug('Choosing closest to center food as destination')
         return closest_to_center_food(board)
     logger.debug('Choosing closest food as destination')
@@ -303,5 +303,5 @@ if __name__ == '__main__':
     bottle.run(
         application,
         host=os.getenv('IP', '0.0.0.0'),
-        port=os.getenv('PORT', '8080'),
+        port=os.getenv('PORT', '8037'),
         debug = True)
